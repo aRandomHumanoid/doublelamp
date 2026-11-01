@@ -1,0 +1,31 @@
+{
+  "name": "@doublelamp/web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DoubleLamp web app: controls both lamps from anywhere (docs/06-web-apps.md Part A)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/check-size.mjs",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
+    "mock": "node dev/mock-server.mjs"
+  },
+  "dependencies": {
+    "@doublelamp/effects": "1.0.0",
+    "@doublelamp/protocol": "1.0.0",
+    "react": "^19.1.0",
+    "react-colorful": "^5.6.1",
+    "react-dom": "^19.1.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7",
+    "vitest": "^3.2.4"
+  }
+}

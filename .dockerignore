@@ -1,0 +1,18 @@
+# Keep the build context small and free of secrets and runtime data.
+.git
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+data
+server/data
+.virtual-lamps
+firmware
+docs
+.vscode
+.idea
+**/.DS_Store
+**/Thumbs.db

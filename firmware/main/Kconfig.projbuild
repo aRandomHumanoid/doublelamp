@@ -1,0 +1,58 @@
+menu "DoubleLamp"
+
+    config LAMP_LED_GPIO
+        int "LED data GPIO"
+        default 7
+        help
+            XIAO ESP32-C3 pin D5 is GPIO7 (02 §2). Goes through the 74AHCT125 level shifter.
+
+    config LAMP_BUTTON_GPIO
+        int "Built-in button GPIO"
+        default 9
+        help
+            The XIAO's BOOT button (GPIO9). Active low.
+
+    config LAMP_EXT_BUTTON_GPIO
+        int "External button GPIO (-1 = none)"
+        default 3
+        help
+            Optional external button or TTP223 touch module on D1 (GPIO3). Active low, internal pull-up.
+
+    config LAMP_LED_BACKEND_RMT
+        bool "Drive the strip with RMT instead of SPI + DMA"
+        default n
+        help
+            SPI + DMA is the default because WiFi interrupts can't corrupt its timing (03 §5).
+
+    config LAMP_MAX_PIXELS
+        int "Maximum pixel count"
+        range 1 1024
+        default 1024
+
+    config LAMP_DEFAULT_PIXELS_PER_M
+        int "Pixels per meter of the strip (setup uses this to turn a length into a pixel count)"
+        default 16
+
+    config LAMP_DEFAULT_PIXEL_COUNT
+        int "Default pixel count before setup"
+        default 10
+
+    config LAMP_DEFAULT_MA_PER_PIXEL
+        int "Default full-white current per pixel, mA (02 §5)"
+        default 42
+
+    config LAMP_ALLOW_INSECURE_SERVER
+        bool "Allow a plain ws:// / http:// server on a private address (development only)"
+        default n
+        help
+            For a dev server on a laptop on the same WiFi (05 §13). Release builds must leave this off;
+            the lamp reports it as insecure_server_allowed and the web app shows a "dev build" badge.
+
+    config LAMP_HOMEKIT
+        bool "Apple Home (HomeKit) accessory"
+        default y
+        help
+            Needs esp-homekit-sdk at firmware/third_party/esp-homekit-sdk. Without the SDK this option
+            has no effect and the firmware builds without Apple Home.
+
+endmenu

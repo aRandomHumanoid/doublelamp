@@ -1,0 +1,204 @@
+{
+  "description": "Reconnect merge (04 §6, 05 §4). For each top-level field f (effect counts as one field): if hello.dirty[f].age_ms is a number, lamp_ts = now - age_ms, and the lamp's value wins only if lamp_ts > server field_ts[f] (strictly newer), in which case field_ts[f] = lamp_ts. Not dirty, unknown age (null) or older: the server's value wins. 'desired' is welcome.desired; 'lamp_won' lists the fields taken from the lamp, in field order.",
+  "fields": ["on", "brightness", "colors", "effect"],
+  "cases": [
+    {
+      "name": "not dirty: the server wins every field",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": false, "brightness": 60, "colors": ["#7A2BFF"], "effect": { "id": "candle", "speed": 100, "intensity": 140, "seed": 77, "epoch": 1761649950000, "duration_ms": 0 } },
+        "dirty": {}
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": [],
+        "desired": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "offline edit newer than the server's change: the lamp wins that field",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": true, "brightness": 180, "colors": ["#7a2bff"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "dirty": { "colors": { "age_ms": 60000 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": ["colors"],
+        "desired": { "on": true, "brightness": 180, "colors": ["#7A2BFF"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649940000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "offline edit older than the server's change: the server wins",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": true, "brightness": 180, "colors": ["#7A2BFF"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "dirty": { "colors": { "age_ms": 300000 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": [],
+        "desired": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "unknown age (restored from flash after a reboot): the server wins",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": false, "brightness": 180, "colors": ["#7A2BFF"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "dirty": { "on": { "age_ms": null }, "colors": { "age_ms": null } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": [],
+        "desired": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "mixed: each field is decided on its own",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": false, "brightness": 60, "colors": ["#7A2BFF"], "effect": { "id": "candle", "speed": 100, "intensity": 140, "seed": 77, "epoch": 1761649950000, "duration_ms": 0 } },
+        "dirty": { "on": { "age_ms": 12000 }, "brightness": { "age_ms": 400000 }, "colors": { "age_ms": null }, "effect": { "age_ms": 5000 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": ["on", "effect"],
+        "desired": { "on": false, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "candle", "speed": 100, "intensity": 140, "seed": 77, "epoch": 1761649950000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649988000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761649995000 }
+      }
+    },
+    {
+      "name": "equal timestamps: the server wins (the lamp must be strictly newer)",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": true, "brightness": 20, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "dirty": { "brightness": { "age_ms": 300000 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": [],
+        "desired": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "effect is one field: the lamp's whole effect object wins, epoch and seed included",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "rainbow", "speed": 64, "intensity": 96, "seed": 5, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "rainbow", "speed": 200, "intensity": 96, "seed": 5, "epoch": 1761645000000, "duration_ms": 0 } },
+        "dirty": { "effect": { "age_ms": 1000 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": ["effect"],
+        "desired": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "rainbow", "speed": 200, "intensity": 96, "seed": 5, "epoch": 1761645000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761649999000 }
+      }
+    },
+    {
+      "name": "age 0: an edit made just before reconnecting wins",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": false, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "dirty": { "on": { "age_ms": 0 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": ["on"],
+        "desired": { "on": false, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761650000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "the lamp wins with the value the server already has: only the timestamp moves",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": true, "brightness": 180, "colors": ["#ff8a3d"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "dirty": { "colors": { "age_ms": 1000 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": ["colors"],
+        "desired": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649999000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "a very old offline edit loses to any server change",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      },
+      "hello": {
+        "state": { "on": false, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "dirty": { "on": { "age_ms": 100000000 } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": [],
+        "desired": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 1761640000000, "duration_ms": 0 } },
+        "field_ts": { "on": 1761649000000, "brightness": 1761649700000, "colors": 1761649900000, "effect": 1761640000000 }
+      }
+    },
+    {
+      "name": "a field the server never changed (ts 0) loses to any known-age edit",
+      "now": 1761650000000,
+      "server": {
+        "state": { "on": true, "brightness": 180, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 0, "duration_ms": 0 } },
+        "field_ts": { "on": 0, "brightness": 0, "colors": 0, "effect": 0 }
+      },
+      "hello": {
+        "state": { "on": true, "brightness": 30, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 0, "duration_ms": 0 } },
+        "dirty": { "brightness": { "age_ms": 86400000 }, "on": { "age_ms": null } }
+      },
+      "expected": {
+        "adopted": false,
+        "lamp_won": ["brightness"],
+        "desired": { "on": true, "brightness": 30, "colors": ["#FF8A3D"], "effect": { "id": "solid", "speed": 128, "intensity": 128, "seed": 1, "epoch": 0, "duration_ms": 0 } },
+        "field_ts": { "on": 0, "brightness": 1761563600000, "colors": 0, "effect": 0 }
+      }
+    }
+  ]
+}

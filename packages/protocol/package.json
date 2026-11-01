@@ -1,0 +1,25 @@
+{
+  "name": "@doublelamp/protocol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Message types, zod schemas and test vectors shared by the server, web app, lamp UI and virtual lamp (docs/04-protocol.md)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./local": "./src/local.ts",
+    "./effects-catalog": "./src/effects.ts",
+    "./test-vectors/*": "./test-vectors/*"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "description": "First connect (04 §6 last row): the server has no stored state for the device, so it adopts the lamp's whole state and sends welcome.desired = null. Fields with a known age get field_ts = now - age_ms; the rest get 0 (unknown), so any later server change or known-age edit beats them. 'server' is null in every case.",
+  "fields": ["on", "brightness", "colors", "effect"],
+  "cases": [
+    {
+      "name": "unknown device with no dirty fields: adopt, every timestamp unknown",
+      "now": 1761650000000,
+      "server": null,
+      "hello": {
+        "state": { "on": true, "brightness": 140, "colors": ["#FFB46B"], "effect": { "id": "breathe", "speed": 96, "intensity": 160, "seed": 4242, "epoch": 1761600000000, "duration_ms": 0 } },
+        "dirty": {}
+      },
+      "expected": {
+        "adopted": true,
+        "lamp_won": ["on", "brightness", "colors", "effect"],
+        "desired": null,
+        "state": { "on": true, "brightness": 140, "colors": ["#FFB46B"], "effect": { "id": "breathe", "speed": 96, "intensity": 160, "seed": 4242, "epoch": 1761600000000, "duration_ms": 0 } },
+        "field_ts": { "on": 0, "brightness": 0, "colors": 0, "effect": 0 }
+      }
+    },
+    {
+      "name": "unknown device with offline edits: adopt, known ages become timestamps",
+      "now": 1761650000000,
+      "server": null,
+      "hello": {
+        "state": { "on": false, "brightness": 90, "colors": ["#ff4000", "#7a2bff"], "effect": { "id": "gradient", "speed": 0, "intensity": 128, "seed": 9, "epoch": 1761649000000, "duration_ms": 0 } },
+        "dirty": { "colors": { "age_ms": 300000 }, "on": { "age_ms": null } }
+      },
+      "expected": {
+        "adopted": true,
+        "lamp_won": ["on", "brightness", "colors", "effect"],
+        "desired": null,
+        "state": { "on": false, "brightness": 90, "colors": ["#FF4000", "#7A2BFF"], "effect": { "id": "gradient", "speed": 0, "intensity": 128, "seed": 9, "epoch": 1761649000000, "duration_ms": 0 } },
+        "field_ts": { "on": 0, "brightness": 0, "colors": 1761649700000, "effect": 0 }
+      }
+    }
+  ]
+}

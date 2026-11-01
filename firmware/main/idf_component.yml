@@ -1,0 +1,4 @@
+## IDF Component Manager manifest (03 §2). Each component declares its own managed
+## dependencies; dependencies.lock records the exact versions of a build.
+dependencies:
+  idf: ">=5.5,<5.6"

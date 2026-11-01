@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>DoubleLamp</title>
+  <defs>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE2BC"/>
+      <stop offset="0.55" stop-color="#FFB46B"/>
+      <stop offset="1" stop-color="#FF8A3D"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFB46B" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#FFB46B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Full bleed; the artwork stays inside the 80 % safe zone. -->
+  <rect width="512" height="512" fill="#0E0F13"/>
+  <circle cx="256" cy="256" r="200" fill="url(#glow)"/>
+  <rect x="170" y="140" width="62" height="232" rx="31" fill="url(#bar)"/>
+  <rect x="280" y="140" width="62" height="232" rx="31" fill="url(#bar)"/>
+  <rect x="226" y="246" width="60" height="20" rx="10" fill="#FFB46B"/>
+</svg>

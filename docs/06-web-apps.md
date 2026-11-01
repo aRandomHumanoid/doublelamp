@@ -25,11 +25,12 @@ There are two UIs, and they share one visual language:
 | Screen | Contents |
 |---|---|
 | **Home** | Two lamp tiles plus a link toggle; the scenes row; the control sheet |
-| **Lamp** | Name, status (online, RSSI, firmware, IP with a link to its local UI), identify, LED config, test patterns, firmware update, unpair |
+| **Lamp** | Name, status (online, RSSI, firmware, IP with a link to its local UI, Apple Home paired or not), identify, LED config, test patterns, firmware update, unpair. The Apple Home setup code is shown only in the lamp's own UI, never through the server. A "dev build" badge shows when `insecure_server_allowed` is set. |
 | **Scenes** | Grid of saved scenes. "Save current as scene", reorder (the first 8 become lamp presets), edit, delete. |
 | **Schedules** | A list with next-run times. The editor sets target, time and days or cron, and an action: power, scene, sunrise or fade off. |
-| **Activity** | Timeline of state changes ("Sam set Lamp B to Candle · from web"), connects and disconnects, OTA results |
-| **Settings** | Users (admin), "Add lamp" pairing-code dialog, firmware library (upload, versions), about |
+| **Activity** | Timeline of state changes ("Lamp B → Candle · web, Kitchen iPad" or "Lamp A → off · Apple Home"), connects and disconnects, OTA results |
+| **Settings** | Shared password (change) and signed-in browsers (revoke), "Add lamp" pairing-code dialog, firmware library (upload, versions), about |
+| **Login** | One password field, plus an optional "Name this device" field that becomes the session label ([05 §6](05-server.md#6-login-one-shared-password)) |
 
 ### A.2 Home layout (phone)
 
@@ -104,20 +105,25 @@ There are two UIs, and they share one visual language:
 2. **WiFi:** scanned networks sorted by signal (lock icon, signal bars), plus a "hidden network" option.
 3. **Password**, with a show/hide toggle.
 4. **Name and admin password.** The admin password protects settings and is the lamp's direct-mode WiFi password.
-5. **Power supply:** USB only / 5 V 2 A / 5 V 4 A / custom → `max_current_ma` ([02 §5](02-hardware.md#5-power)).
+5. **Strip and power supply:**
+   - Strip length in meters, in 62.5 mm steps. This sets `pixel_count` to 16 per meter.
+   - Supply: 12 V 1 A / 2 A / 3 A / 5 A / custom, which sets `max_current_ma` ([02 §5](02-hardware.md#5-power)).
 6. **Server (optional):** URL plus pairing code, with "Skip; I'll use it on its own".
 7. **Connecting…:** live status from `/setup/status`, with specific errors ("Wrong password", "Network not found", "No IP address"). Back returns to the step that needs fixing.
-8. **Done:** shows `http://doublelamp-3fa2c1.local` and the IP, an "Open lamp" button, and a note to bookmark it.
+8. **Done:**
+   - Shows `http://doublelamp-3fa2c1.local` and the IP, an "Open lamp" button, and a note to bookmark it.
+   - **Add to Apple Home:** shows the setup code in large digits with a copy button. The page fetches it with the admin password from step 4, which it holds in memory only. Instructions underneath: switch the phone back to home WiFi, then Home app → + → Add Accessory → More options… → enter the code → **Add Anyway** at the "Uncertified Accessory" prompt.
 
 ### B.3 Control and settings
 
-- **Control:** the same layout as the server app's control sheet, for one lamp, with the 8 presets. When the lamp is linked, a banner reads *"Linked with Lamp B: changes apply to both"*.
+- **Control:** the same layout as the server app's control sheet, for one lamp, with the 8 presets. When the lamp is linked, a banner reads *"Linked with Lamp B: changes apply to both"*. Changes made from Apple Home show up live, like any other change.
 - **Settings** (admin login, token kept in memory for the session):
 
 | Section | Contains |
 |---|---|
 | LEDs | Pixel count, channels, color order, current limit, calibration, color correction, fps, dithering, power-on behavior; the color-order and last-pixel **test patterns** |
 | Network | Current SSID and RSSI, change WiFi, "direct mode always on" |
+| Apple Home | Paired or not, number of paired iPhones, setup code with the add-accessory steps, **Reset Apple Home** (removes all pairings) |
 | Server | Status, URL, pair / unpair |
 | Security | Change the admin password and the direct-mode password |
 | Firmware | Version, build, upload a `.bin` (signature checked on the lamp) |
@@ -131,4 +137,4 @@ device-ui/src/*.ts, *.css ─esbuild (minify, bundle)─► inline into index.ht
 ```
 
 - **Small toolkit.** A ~1 KB reactive store and a `h()` DOM helper. The color wheel is drawn on a canvas, with HSV math in integers that match the firmware.
-- **Kept in sync.** `pnpm build:device-ui` runs before `idf.py build`, from a firmware CMake step or a CI step. CI checks that the committed `.gz` matches its source.
+- **Kept in sync.** `npm run build:device-ui` runs before `idf.py build`, from a firmware CMake step or a CI step. CI checks that the committed `.gz` matches its source.

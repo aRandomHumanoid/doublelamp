@@ -11,7 +11,7 @@
 
 1. **Replicate the state, not the pixels.** Lamps receive a small `LampState` (power, brightness, colors, effect parameters) and render it themselves.
 2. **Effects are pure functions of time.** Output is `f(params, now − epoch, normalized pixel position)`, with randomness from a seeded counter-based hash. Two lamps with the same state and clock render the same thing, whatever their pixel counts.
-3. **A shared clock.** Every lamp and browser estimates the server's clock with NTP-style ping/pong over its WebSocket ([03 §11](../03-firmware.md#11-time-sync)).
+3. **A shared clock.** Every lamp and browser estimates the server's clock with NTP-style ping/pong over its WebSocket ([03 §12](../03-firmware.md#12-time-sync)).
 4. **Scheduled application.** For linked changes, the server sets `apply_at` just past the slowest member's measured delay. Every lamp starts its transition at that moment. Effect `epoch` is set to `apply_at`, so phases line up.
 5. **The server decides the order while connected.** It timestamps each accepted change per field and sends the full state to every member, including the sender. This guarantees all lamps end up identical.
 6. **Offline edits report their age.** A reconnecting lamp reports the age of fields it changed while offline, measured on its monotonic clock. The server merges per field, and the newest change wins. A field with unknown age loses to the server ([04 §6](../04-protocol.md#6-merge-rules)).

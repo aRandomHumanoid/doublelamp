@@ -1,0 +1,18 @@
+{
+  "name": "@doublelamp/device-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The lamp's built-in UI: setup wizard, local control, settings. Builds to one gzipped HTML file embedded in the firmware (docs/06-web-apps.md Part B)",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "typecheck": "tsc -p tsconfig.json",
+    "mock": "node mock-lamp.mjs"
+  },
+  "devDependencies": {
+    "@doublelamp/protocol": "1.0.0",
+    "esbuild": "^0.25.12",
+    "typescript": "^5.9.3"
+  }
+}

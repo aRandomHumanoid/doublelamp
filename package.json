@@ -1,0 +1,28 @@
+{
+  "name": "doublelamp",
+  "private": true,
+  "description": "A pair of linked WiFi lamps: firmware, server, web app and lamp UI",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "packages/protocol",
+    "packages/effects",
+    "server",
+    "web",
+    "device-ui",
+    "tools/virtual-lamp"
+  ],
+  "scripts": {
+    "build": "npm run build -w web && npm run build -w device-ui",
+    "build:web": "npm run build -w web",
+    "build:device-ui": "npm run build -w device-ui",
+    "start": "npm start -w server",
+    "dev": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "virtual-lamp": "npm start -w tools/virtual-lamp --"
+  }
+}

@@ -1,0 +1,61 @@
+# DoubleLamp server, optionally behind Cloudflare Tunnel (05 §13).
+#
+#   docker compose up -d                          # the server only; no published ports
+#   docker compose --profile tunnel up -d         # production: server + cloudflared
+#   docker compose --profile local up -d          # local testing: also publishes the server on port 8080
+#
+# Configuration comes from server/.env (copy server/.env.example). TUNNEL_TOKEN goes in ./.env next to this
+# file (or the shell environment), so cloudflared never sees the server's secrets.
+# ./data must be writable by uid 1000, the image's non-root "node" user:
+#   mkdir -p data && sudo chown 1000:1000 data
+# In the Cloudflare dashboard, point the tunnel's public hostname at http://server:8080.
+
+name: doublelamp
+
+x-image: &image
+  build: .
+  image: doublelamp-server:local
+
+services:
+  server:
+    <<: *image
+    env_file: server/.env
+    environment:
+      DATA_DIR: /data
+      PORT: "8080"
+      HOST: 0.0.0.0
+    volumes:
+      - ./data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    # No "ports:": only cloudflared (or local-port) reaches it, over the compose network (07 §5, T18).
+
+  # Profile "local": publishes the server on this machine's port 8080 by forwarding TCP (WebSockets included)
+  # to it over the compose network, so the server itself still publishes nothing. Not for production:
+  # the server sees every client as this forwarder's address.
+  local-port:
+    <<: *image
+    profiles: ["local"]
+    command:
+      - node
+      - -e
+      - "const n=require('node:net');n.createServer(c=>{const s=n.connect(8080,'server');c.pipe(s).pipe(c);c.on('error',()=>s.destroy());s.on('error',()=>c.destroy())}).listen(8080)"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - server
+    read_only: true
+    restart: unless-stopped
+
+  cloudflared:
+    # Pinned on purpose; bump deliberately after checking the release notes.
+    image: cloudflare/cloudflared:2026.10.1
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - server
+    restart: unless-stopped

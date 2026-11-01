@@ -1,0 +1,4 @@
+# Development overlay: accept a plain ws:// / http:// server on a private address, for a dev
+# server on a laptop on the same WiFi (05 §13). Never ship this: release CI fails if it's set.
+CONFIG_LAMP_ALLOW_INSECURE_SERVER=y
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

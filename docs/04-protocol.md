@@ -52,7 +52,7 @@ This document is the source of truth for every message format. `packages/protoco
 
 | Object | Fields |
 |---|---|
-| `DeviceInfo` | `id`, `name`, `fw`, `proto`, `build`, `hw {chip:"esp32c3", pixels, channels, color_order}`, `net {mode:"sta"\|"ap"\|"apsta", ssid, ip, rssi}`, `cloud {state:"off"\|"connecting"\|"online", url, linked, group_name}`, `uptime_s` |
+| `DeviceInfo` | `id`, `name`, `fw`, `proto`, `build`, `hw {chip:"esp32c3", pixels, channels, color_order}`, `net {mode:"sta"\|"ap"\|"apsta", ssid, ip, rssi}`, `cloud {state:"off"\|"connecting"\|"online", url, linked, group_name}`, `homekit {state:"off"\|"unpaired"\|"paired", controllers}`, `insecure_server_allowed` (true only on development builds), `uptime_s`. The Apple Home setup code is never part of `DeviceInfo`; only `GET /homekit` returns it. |
 | `LedConfig` | `pixel_count` (1–1024), `channels` (3\|4), `color_order` (`"GRB"`, `"RGB"`, `"BRG"`, …, `"GRBW"`), `max_current_ma` (100–20000), `ma_per_pixel_white` (1–200), `color_correction` (`[r,g,b]`, each 0–255), `fps` (10–100), `dither` (bool), `power_on` (`"restore"\|"on"\|"off"`) |
 | `EffectDesc` | `id`, `name`, `uses` (subset of `["colors1","colors2","colors3","speed","intensity","duration"]`), `oneshot` (bool) |
 | `Preset` | `slot` (0–7), `name`, `state` (a full LampState with no `epoch`) |
@@ -63,27 +63,38 @@ The base URL is `http://<lamp>/api/v1`. "Admin" means the request needs `Authori
 
 | Method & path | Auth | Body → Response |
 |---|---|---|
-| `GET /info` | none | → `DeviceInfo` |
-| `GET /state` | none | → `LampState` |
-| `PATCH /state` | none | `Command` → `LampState` |
-| `GET /effects` | none | → `EffectDesc[]` |
-| `GET /presets` | none | → `Preset[]` |
+| `GET /info` | none | → `DeviceInfo`. `setup_mode: true` tells the UI to show the setup wizard. |
+| `GET /state` | none | → `LampState`, with its revision in the `X-Rev` header |
+| `PATCH /state` | none | `Command` → `LampState` (+ `X-Rev`) |
+| `GET /effects` | none | → `EffectDesc[]` (with per-effect `defaults`) |
+| `GET /presets` | none | → `Preset[]` (only filled slots) |
 | `POST /presets/{slot}/apply` | none | `{transition_ms?}` → `LampState` |
-| `PUT /presets/{slot}` | admin | `Preset` → `Preset`. Returns `409 managed_by_server` while claimed. |
+| `PUT /presets/{slot}` | admin | `{name, state?}` → `Preset`. `state` defaults to the current state. Returns `409 managed_by_server` while claimed. |
+| `DELETE /presets/{slot}` | admin | → `204`. `409 managed_by_server` while claimed. |
 | `POST /auth/login` | none | `{password}` → `{token, expires_in}`. The session lives 30 days in RAM and is lost on reboot. |
+| `POST /auth/logout` | admin | → `204` |
 | `GET /config` · `PUT /config` | admin | `LedConfig`, full or partial |
-| `POST /test-pattern` | admin† | `{pattern:"color_order"\|"last_pixel"\|"white_25", duration_ms}` |
+| `POST /test-pattern` | admin† | `{pattern:"color_order"\|"last_pixel"\|"white_25", duration_ms}`. `duration_ms: 0` stops a running pattern. `color_order` lights wire byte 1, 2, 3 of the first pixel in turn, ignoring the configured order, so the colors seen spell the strip's order. |
 | `GET /wifi/scan` | admin† | → `[{ssid, rssi, auth}]` |
-| `PUT /wifi` | admin | `{ssid, password, [eap…]}` → `202`. The lamp reconnects. |
-| `POST /setup` | † only | `{ssid, password, name, admin_password, power:{preset\|max_current_ma}, server_url?, pairing_code?}` → `202` |
-| `GET /setup/status` | † only | → `{state:"idle"\|"connecting"\|"online"\|"failed", reason?, ip?, host?}` |
-| `POST /cloud/claim` | admin† | `{server_url, code}` → `{state:"online"}` or an error |
+| `PUT /wifi` | admin | `{ssid, password}` → `202`. The lamp reconnects. |
+| `GET /network` · `PUT /network` | admin | `{ap_always_on}`: keep the WPA2 direct-mode AP up while online |
+| `PUT /security` | admin | `{current_password, admin_password?, ap_password?}` → `204`. `401` if `current_password` is wrong. |
+| `POST /setup` | † only | `{ssid, password, name, admin_password, strip_m, power:{preset\|max_current_ma}, server_url?, pairing_code?}` → `202`. `strip_m` (0.0625–64) sets `pixel_count = round(16 × strip_m)`. `preset` is one of `"12v1a"`, `"12v2a"`, `"12v3a"`, `"12v5a"` ([02 §5](02-hardware.md#5-power)). |
+| `GET /setup/status` | † only | → `{state:"idle"\|"connecting"\|"online"\|"failed", reason?, ip?, host?, cloud?:"skipped"\|"claiming"\|"online"\|"failed", cloud_error?}`. `reason` is `wrong_password`, `no_network`, `no_ip` or `timeout`. |
+| `GET /homekit` | admin | → `{state, controllers, setup_code:"XXX-XX-XXX", setup_id}` |
+| `POST /homekit/reset` | admin | Removes all Apple Home pairings and keeps the code → `202` |
+| `POST /cloud/claim` | admin† | `{server_url, code}` → `{state:"online"}`, or an error whose code is `invalid_code` (400), `code_expired` (410), `rate_limited` (429), `unreachable` or `claim_failed` (502) |
 | `DELETE /cloud` | admin | Unpairs: erases the URL and token |
 | `POST /ota` | admin | `application/octet-stream` firmware image → `202`, then reboot |
 | `GET /logs` | admin | → `text/plain` from the ring buffer |
 | `POST /identify` | none | `{duration_ms?}` |
+| `PUT /name` | admin | `{name}` → `{name}`: rename the lamp locally. While paired, the server learns it through `info`. |
 | `POST /reboot` · `POST /factory-reset` | admin | → `202` |
 | `GET /ws` | none | WebSocket upgrade (§3.1) |
+
+**Request rules** ([07 §4](07-security.md#4-lamp-local-api)): every `POST`, `PUT` and `PATCH` carries `Content-Type: application/json` and a JSON body (`{}` when there's nothing to send), except `POST /ota`, which is `application/octet-stream`. `DELETE` needs only the admin token. The `Host` must be the lamp's IP, `doublelamp-xxxxxx.local` or `192.168.4.1`.
+
+**`DeviceInfo` extras from the lamp:** `cloud.peers` (names of the other lamps in the link group), `cloud.problem` (e.g. "re-pair needed"), and `presets_rev`, which changes whenever a preset changes so open pages can refetch.
 
 **Errors** come back as `{"error": {"code": "invalid", "message": "brightness must be 0–255", "field": "brightness"}}`:
 
@@ -102,7 +113,7 @@ The base URL is `http://<lamp>/api/v1`. "Admin" means the request needs `Authori
 
 | Direction | Message | Data |
 |---|---|---|
-| lamp → client | `state` | `{rev, state, origin}`, sent on connect and on every change |
+| lamp → client | `state` | `{rev, state, origin}`, sent on connect and on every change. `origin` is `"local"`, `"cloud"`, `"homekit"`, `"button"`, `"timer"` or `"boot"`. |
 | lamp → client | `info` | `DeviceInfo`, sent on connect and when network or cloud status changes |
 | client → lamp | `cmd` | a `Command`, the same as `PATCH /state` |
 | lamp → client | `error` | `{ref?, code, message}` |
@@ -124,7 +135,7 @@ Every message uses the envelope in §4.2.
 | 4004 | `proto` not supported | Retries every 1 h. Shows "firmware update needed". |
 | 4008 | Protocol violation | Backs off, then reconnects |
 
-- **Liveness.** The lamp sends WS pings every 20 s. The server closes a connection after 45 s of silence.
+- **Liveness.** The lamp sends `time.ping` at least every 20 s (§5). Any message counts as traffic. The server closes a connection after 45 s of silence. Application messages are used instead of WS ping frames, because the connection goes through Cloudflare, which drops WebSockets that carry no data for 100 s.
 
 ### 4.2 Envelope
 
@@ -139,13 +150,14 @@ Every message uses the envelope in §4.2.
 
 | type | Data | Notes |
 |---|---|---|
-| `hello` | `{device_id, proto, fw, build, hw, state, dirty, boot_reason, rollback, pending_verify, uptime_s, ip, rssi, effects:[ids]}` | First message on every connection |
-| `state.report` | `{rev, patch, origin:"local"\|"button"\|"timer"}` | A change that didn't come from the server |
+| `hello` | `{device_id, proto, fw, build, hw, state, dirty, boot_reason, rollback, pending_verify, uptime_s, ip, rssi, effects:[ids], info, config}` | First message on every connection. `info` is the `DeviceInfo` and `config` the `LedConfig`. |
+| `state.report` | `{rev, patch, origin:"local"\|"homekit"\|"button"\|"timer"}` | A change that didn't come from the server |
 | `time.ping` | `{t0}` | §5 |
 | `ack` / `error` | `{}` / `{code, message}` | Replies to server messages that carried an `id` |
 | `ota.progress` | `{job_id, phase:"download"\|"verify"\|"reboot"\|"done"\|"failed", pct, error?}` | |
 | `event` | `{kind:"button", gesture}` · `{kind:"crash", summary}` · `{kind:"log", level, msg}` | Logs are warnings and errors only, at most 1 per second |
 | `telemetry` | `{rssi, heap_free, heap_min, uptime_s, fps, reconnects, temp_c}` | Every 60 s |
+| `info` | `{info: DeviceInfo, config?: LedConfig}` | When the name, network, Apple Home status or LED config changes |
 
 `dirty` lists the fields changed while disconnected, with how long ago each changed according to the lamp's monotonic clock. A field restored from flash after a reboot has an unknown age, so it is reported as `null` or left out.
 
@@ -162,17 +174,18 @@ Every message uses the envelope in §4.2.
 | `time.pong` | `{t0, t1, t2}` | |
 | `link` | same shape as `welcome.link` | Sent when linking changes |
 | `config.set` | partial `LedConfig` | |
-| `presets.sync` | `Preset[]` | Server scenes pushed down as lamp presets, so local UIs and the button can use them |
+| `presets.sync` | `{presets: Preset[]}` | Server scenes pushed down as lamp presets, so local UIs and the button can use them |
 | `identify` | `{duration_ms}` | |
 | `nudge` | `{from_name, color, count}` | |
 | `ota.start` | `{job_id, version, url, sha256, size, allow_downgrade}` | `url` carries a token that expires in 15 min |
 | `reboot` · `unclaim` | `{}` | |
+| `name.set` | `{name}` | The lamp was renamed in the web app |
 
 ### 4.5 Pairing (HTTP)
 
 ```
 POST /api/v1/devices/claim        (no auth; rate-limited)
-{ "code": "K7QM-4ZTX", "device_id": "dl-3fa2c1", "name": "Lamp A", "fw": "1.0.0", "hw": { "pixels": 240, "channels": 3 } }
+{ "code": "K7QM-4ZTX", "device_id": "dl-3fa2c1", "name": "Lamp A", "fw": "1.0.0", "hw": { "pixels": 10, "channels": 3 } }
 → 200 { "device_token": "<43-char base64url>", "ws_url": "wss://lamps.example.com/ws/device" }
 → 400 invalid_code | 410 code_expired | 429 rate_limited
 ```
@@ -185,7 +198,7 @@ lamp:   t3 = sync_now()  ◄──time.pong{t0,t1,t2}──  server: t2 = now() 
 offset = ((t1 − t0) + (t2 − t3)) / 2      delay = (t3 − t0) − (t2 − t1)
 ```
 
-The filtering and correction rules are in [03 §11](03-firmware.md#11-time-sync). Browsers run the same exchange over their own WebSocket, so previews stay in phase with the real lamps.
+The filtering and correction rules are in [03 §12](03-firmware.md#12-time-sync). Browsers run the same exchange over their own WebSocket, so previews stay in phase with the real lamps.
 
 ## 6. Merge rules
 
@@ -209,7 +222,8 @@ The merged state goes back in `welcome.desired`.
 
 | Method & path | Purpose |
 |---|---|
-| `POST /auth/login` · `POST /auth/logout` · `GET /me` | Session management |
+| `POST /auth/login` · `POST /auth/logout` · `GET /me` | Session management. There is one shared password; login takes `{password, label?}` ([05 §6](05-server.md#6-login-one-shared-password)). |
+| `PUT /auth/password` · `GET /sessions` · `DELETE /sessions/{id}` | Change the shared password; list and revoke signed-in browsers |
 | `GET /devices` · `GET/PATCH/DELETE /devices/{id}` | List devices, rename them, change LED config, unclaim |
 | `POST /devices/{id}/state` · `POST /groups/{id}/state` | Send a `Command`. Same as the WS `cmd`; handy for scripts. |
 | `POST /devices/{id}/identify` · `POST /devices/{id}/nudge` | Overlays |
@@ -217,9 +231,8 @@ The merged state goes back in `welcome.desired`.
 | `GET/POST/PUT/DELETE /scenes[/{id}]` · `POST /scenes/{id}/apply` | Scenes; apply takes `{target}` |
 | `GET/POST/PUT/DELETE /schedules[/{id}]` | Schedules |
 | `POST /pairing-codes` | → `{code, expires_in}` |
-| `GET/POST /firmware` · `POST /devices/{id}/ota` · `GET /ota-jobs` | Firmware and OTA (admin only) |
+| `GET/POST /firmware` · `POST /devices/{id}/ota` · `GET /ota-jobs` | Firmware and OTA |
 | `GET /events?device_id&before&limit` | Activity log |
-| `GET/POST/DELETE /users[/{id}]` | Users (admin only) |
 
 ### 7.2 WebSocket `/ws/client` (session cookie; Origin header checked)
 
@@ -241,7 +254,7 @@ The merged state goes back in `welcome.desired`.
 |---|---|
 | `invalid` | Schema or range check failed |
 | `unknown_effect` | Effect id isn't supported by this lamp's firmware |
-| `auth_required` / `forbidden` | Not logged in / not allowed |
+| `auth_required` / `forbidden` | Not logged in / not allowed (for example, a setup-only route outside Setup mode) |
 | `offline` | Target lamp isn't connected. Server only; the command is not queued. |
 | `managed_by_server` | A local edit was refused because the server manages that resource |
 | `rate_limited` · `too_large` · `busy` | Limits |

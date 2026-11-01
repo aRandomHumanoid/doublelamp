@@ -25,4 +25,4 @@ Each lamp keeps **one persistent WebSocket over TLS** (`wss://…/ws/device`). M
 - **Good:** one port (443) works through Caddy, Cloudflare Tunnel and most firewalls. There's one server process and one way of authenticating.
 - **Good:** lamps, browsers and the virtual lamp share the same schemas and test vectors.
 - **Cost:** we implement acknowledgments, heartbeats, reconnect backoff and per-connection message merging ourselves, where MQTT would have given us some of that. The protocol is small, so this is acceptable.
-- **Later:** if Home Assistant support is wanted, an **MQTT bridge** in the server can publish HA-discovery topics without changing the lamps (roadmap M5).
+- **Later:** if Home Assistant support is wanted, an **MQTT bridge** in the server can publish HA-discovery topics without changing the lamps (roadmap M6).

@@ -1,0 +1,10 @@
+# DoubleLamp partition table (03 §15). No factory app: two OTA slots with rollback.
+# Offsets are left blank so the build tool places them.
+# Name,      Type, SubType,  Offset, Size
+nvs,         data, nvs,      ,       64K
+otadata,     data, ota,      ,       8K
+phy_init,    data, phy,      ,       4K
+ota_0,       app,  ota_0,    ,       1920K
+ota_1,       app,  ota_1,    ,       1920K
+factory_nvs, data, nvs,      ,       24K
+coredump,    data, coredump, ,       64K

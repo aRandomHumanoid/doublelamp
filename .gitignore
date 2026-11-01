@@ -1,0 +1,26 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# Server runtime data and secrets
+.env
+server/data/
+data/
+
+# Firmware build output (keep dependencies.lock committed)
+firmware/build*/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/managed_components/
+firmware/test/host/build/
+
+# Firmware signing key: never commit (see docs/07-security.md §6)
+firmware/keys/
+*.pem
+
+# Editors / OS (VS Code settings hold machine-specific paths)
+**/.vscode/settings.json
+.DS_Store
+Thumbs.db

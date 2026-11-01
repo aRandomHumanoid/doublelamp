@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Development",
+      "description": "Accepts a ws:// server on your LAN. Same as .\\lamp.ps1 build",
+      "binaryDir": "${sourceDir}/build-dev",
+      "cacheVariables": {
+        "IDF_TARGET": "esp32c3",
+        "SDKCONFIG": "${sourceDir}/build-dev/sdkconfig",
+        "SDKCONFIG_DEFAULTS": "sdkconfig.defaults;sdkconfig.dev"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "https/wss servers only. Same as .\\lamp.ps1 build -Release",
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "IDF_TARGET": "esp32c3",
+        "SDKCONFIG": "${sourceDir}/build-release/sdkconfig",
+        "SDKCONFIG_DEFAULTS": "sdkconfig.defaults"
+      }
+    }
+  ]
+}
